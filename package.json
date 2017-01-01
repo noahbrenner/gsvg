@@ -1,0 +1,77 @@
+{
+  "name": "gsvg",
+  "version": "0.1.0",
+  "description": "Git-Friendly SVG",
+  "engines": {
+    "node": ">=4"
+  },
+  "keywords": [
+    "inkscape",
+    "git",
+    "svg",
+    "xml",
+    "cli",
+    "beautifier",
+    "beautify",
+    "pretty",
+    "prettify"
+  ],
+  "main": "index.js",
+  "bin": {
+    "gsvg": "cli.js"
+  },
+  "scripts": {
+    "test": "xo && ava"
+  },
+  "files": [
+    "lib/",
+    "index.js",
+    "cli.js",
+    "config.json"
+  ],
+  "author": "Noah Brenner <noah@noahbrenner.com>",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "get-stdin": "^5.0.1",
+    "meow": "^3.7.0",
+    "sax": "^1.2.1"
+  },
+  "devDependencies": {
+    "ava": "0.17.x",
+    "xo": "0.17.x"
+  },
+  "xo": {
+    "space": 4,
+    "overrides": [
+      {
+        "files": [
+          "*.js",
+          "lib/*.js"
+        ],
+        "rules": {
+          "arrow-parens": [
+            "error",
+            "always"
+          ],
+          "max-len": [
+            "error",
+            80
+          ],
+          "wrap-iife": [
+            "error",
+            "outside"
+          ]
+        }
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "noahbrenner/gsvg"
+  },
+  "bugs": {
+    "url": "https://github.com/noahbrenner/gsvg/issues"
+  },
+  "homepage": "https://github.com/noahbrenner/gsvg#readme"
+}
