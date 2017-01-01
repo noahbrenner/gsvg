@@ -2,33 +2,31 @@
 
 > Reformat SVG files to reduce `git diff` noise
 
-The impetus for GSVG was the SVG output of [Inkscape][] which is almost, but not at all, [git][]-friendly. The goal is to create a consistent, deterministic formatting for SVG files. This may be valuable no matter what SVG editor you use. The formatting that GSVG outputs is modeled after Inkscape's output, it just fixes some inconsistencies. It's also not limited to the elements that Inkscape outputs; comments, cdata, and stylesheets are preserved. *All* data is preserved\* by default, though you can optionally ask GSVG to remove some Inkscape-specific tags, attributes, and quirks.
+The impetus for GSVG was the SVG output of [Inkscape][] which is almost, but not at all, [git][]-friendly. The goal is to create a consistent, deterministic formatting for SVG files. This may be valuable no matter what SVG editor you use. The formatting that GSVG outputs is modeled after Inkscape's output, it just fixes some inconsistencies. It's also not limited to the elements that Inkscape outputs; comments, cdata, and stylesheets are preserved.
 
 First, some great things about how Inkscape formats its output:
 
 * Each attribute of each tag is on its own line. Great for version control systems like git.
 * Attributes are indented 1 space more than their start tag (and the extra space is *not* added to the next nested tag). Great for humans -- It's easy to see which tag an attribute belongs to but it's not indented as much as the next start tag.
-    ```svg
-    <g
-       class="bar"
-       id="foo">
-      <defs
-         id="baz" />
-    </g>
-    ```
+
+```svg
+<g
+   class="bar"
+   id="foo">
+  <defs
+     id="baz" />
+</g>
+```
 
 However, there are some less ideal Inkscape formatting issues which GSVG addresses:
 
 * The order of attributes in Inkscape's output is non-deterministic. When you re-save a file, Inkscape usually re-orders attributes in tags unrelated to your edit -- which leads to noisy and unclear `git diff` output. **GSVG enforces a consistent order of attributes.**
 * Inkscape mixes spaces and tabs for indentation which is bad form no matter what side of the tabs vs. spaces debate you're on. **GSVG creates consistent (and customizable) indentation.**
 
-\* Text nodes that are not nested inside a `<text>` tag are *not* preserved. They are assumed to be whitespace from indentation which this module is supposed to recalculate. This should only be an issue if you're parsing xml that isn't SVG. I'm open to addressing that use case. Let me know if it's important to you.
-
-
 ## Installation
 
-Command line use: `npm install --global gsvg`
-Use in your project: `npm install --save gsvg`
+* Command line use: `npm install --global gsvg`
+* Use in your project: `npm install --save gsvg`
 
 
 ## Versioning
@@ -40,10 +38,10 @@ GSVG uses Semantic Versioning as defined at <http://semver.org/>. GSVG hasn't re
 
 ### Basic Usage
 
-`gsvg infile.svg`: Print git-friendly output to stdout
-`gsvg infile.svg outfile.svg`: Write output to a file
-`gsvg -i infile.svg`: Overwrite original file
-`cat infile.svg | gsvg`: Use stdin, print to stdout.
+* `gsvg infile.svg`: Print git-friendly output to stdout
+* `gsvg infile.svg outfile.svg`: Write output to a file
+* `gsvg -i infile.svg`: Overwrite original file
+* `cat infile.svg | gsvg`: Use stdin, print to stdout.
 
 ### More Detailed
 
@@ -214,7 +212,7 @@ test.failing('gsvg does a thing', function t {
 
 ## Inspiration
 
-markdown-it
+[markdown-it][], particularly its use of a tokens array instead of an AST.
 
 [AVA]: https://github.com/avajs/ava
 [Inkscape]: https://inkscape.org/en/
@@ -224,3 +222,4 @@ markdown-it
 [d-attribute]: https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d
 [eslint]: http://eslint.org/
 [git]: https://git-scm.com/
+[markdown-it]: https://github.com/markdown-it/markdown-it
