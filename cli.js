@@ -44,39 +44,40 @@ var minimistOptions = {
 var meowOptionsTemplate = {
     inferType: true,
     help: `
-      Usage
-        $ gsvg --help
-        $ gsvg --version
-        $ gsvg [flags/options] [<infile>] [<outfile>]
-        $ echo "<svg></svg>" | gsvg [flags/options] [<outfile>]
+Usage
+  $ gsvg [--help|--version]
+  $ gsvg [flags/options] [<infile> [<outfile>]]
+  $ echo "<svg></svg>" | gsvg [flags/options] [<outfile>]
 
-      <infile> Input filename
-          If a string is piped to GSVG, that will be used as the input and
-          the first positional argument will be treated as <outfile> instead.
+<infile> Input filename
+    If a string is piped to GSVG, that will be used as the input and
+    the first positional argument will be treated as <outfile> instead.
 
-      <outfile> Output filename
-          The file will be overwritten if it exists.
-          If <outfile> is omitted, output will be piped to stdout.
+<outfile> Output filename
+    The file will be overwritten if it exists.
+    If <outfile> is omitted, output will be piped to stdout.
 
-      Flags
-        -h, --help,         Display this message
-        -v, --version       Display version number
+Flags
+  -h, --help,         Display this message
+  -v, --version       Display version number
 
-        -i, --in-place      Change file in place
-            Requires: <infile>
-            Excludes: piping, <outfile>
+  -i, --in-place      Change file in place
+      Requires: <infile>
+      Excludes: piping, <outfile>
 
-      Options
-        -s, --shiftwidth        Shiftwidth used for indentation
-        -a, --attrExtraIndent   Add this to shifwidth for attribute lines
-            <integer> Number of spaces (default 2)
-            <string>  String of only spaces or only 't' character(s);
-                      't' will be converted to tab
+Options
+  -s, --shiftwidth <integer|string>         Shiftwidth used for indentation
+      <integer> (Default: 2) Number of spaces (0 or more)
+      <string>  Spaces (" ") or "t" (converted to "\\t")
 
-      Examples
-        $ gsvg --shiftwidth 4
-        $ gsvg -s t
-        $ gsvg -s '  '
+  -a, --attr-extra-indent <integer|string>  Added to indent for attributes
+      <integer> (Default: 1) Number of spaces (0 or more)
+      <string>  Spaces (" ") or "t" (converted to "\\t")
+
+Examples
+  $ gsvg --shiftwidth t sample.svg
+  $ gsvg -i sample.svg
+  $ cat sample.svg | gsvg -a 0 > sample.gsvg.svg
     `
 };
 

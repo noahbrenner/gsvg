@@ -1,4 +1,4 @@
-# Get an EditorConfig plugin for your tex editor: http://editorconfig.org
+# Get an EditorConfig plugin for your text editor: http://editorconfig.org/
 
 root = true
 
@@ -6,11 +6,11 @@ root = true
 indent_style = space
 end_of_line = lf
 charset = utf-8
-trim_trailing_whitespace = true
 insert_final_newline = true
 
 [*.js]
 indent_size = 4
+trim_trailing_whitespace = true
 
-[*.json]
+[*.{json,md}]
 indent_size = 2
