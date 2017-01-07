@@ -1,28 +1,48 @@
 #!/usr/bin/env node
 'use strict';
 
-var assert = require('assert');
 var fs = require('fs');
 
 var Promise = require('bluebird');
 var getStdin = require('get-stdin');
 var meow = require('meow');
 
+var validateArgs = require('./lib/validate-cli-args');
 var gsvg = require('./');
 
 // eslint-disable-next-line no-use-extend-native/no-use-extend-native
 fs = Promise.promisifyAll(fs);
 
-var cliAliases = {
-    // meow will decamelize any camelCase options
-    h: 'help',
-    v: 'version',
-    i: 'inPlace',
-    s: 'shiftwidth',
-    a: 'attrExtraIndent'
+// is this module imported or is it run as a CLI?
+var isImportedModule = require.main !== module;
+
+// validateArgs uses this
+var validationInfo = {
+    cliAliases: {
+        // meow will decamelize any camelCase options
+        h: 'help',
+        v: 'version',
+        i: 'inPlace',
+        s: 'shiftwidth',
+        a: 'attrExtraIndent'
+    },
+    boolFlags: [
+        'help',
+        'version',
+        'inPlace'
+    ],
+    indentFlags: [
+        'shiftwidth',
+        'attrExtraIndent'
+    ]
 };
 
-var cli = meow({
+var minimistOptions = {
+    alias: validationInfo.cliAliases
+};
+
+var meowOptionsTemplate = {
+    inferType: true,
     help: `
       Usage
         $ gsvg --help
@@ -31,7 +51,7 @@ var cli = meow({
         $ echo "<svg></svg>" | gsvg [flags/options] [<outfile>]
 
       <infile> Input filename
-          If a string is piped to gsvg, that will be used as the input and
+          If a string is piped to GSVG, that will be used as the input and
           the first positional argument will be treated as <outfile> instead.
 
       <outfile> Output filename
@@ -57,11 +77,8 @@ var cli = meow({
         $ gsvg --shiftwidth 4
         $ gsvg -s t
         $ gsvg -s '  '
-    `,
-    inferType: true
-}, {
-    alias: cliAliases
-});
+    `
+};
 
 /* TODO check for these error codes in catch block of promise chain
 var getFileContents = function (filePath) {
@@ -83,139 +100,123 @@ var getFileContents = function (filePath) {
 };
 */
 
-var flags = cli.flags; // object
-var files = cli.input; // array
-var memo = {};
+module.exports = function (cliArgs, testStdin) {
+    // `cliArgs` and `testStdin` are optional and only used for tests
 
-Promise.all([
-    // get input from stdin or input file
-    getStdin().then(function (stdin) {
+    var meowOptions = Object.assign({}, meowOptionsTemplate);
+
+    // if we're running tests, use passed in args instead of process.argv
+    if (isImportedModule) {
+        meowOptions.argv = cliArgs || [];
+    }
+
+    var cli = meow(meowOptions, minimistOptions);
+
+    var result = {
+        flags: cli.flags,
+        files: cli.input
+    };
+
+    // use bluebird promise instead of the one returned by getStdin()
+    return Promise.resolve().then(function () {
+        // only check for real stdin if this file is run directly
+        return isImportedModule ?
+            testStdin :
+            getStdin();
+    }).then(function (stdin) {
+        // get input from stdin or input file
         if (stdin) {
-            memo.stdin = true;
+            result.stdin = stdin;
             return stdin;
         }
+
         if (cli.input[0]) {
-            memo.infile = cli.input[0];
-            // return getFileContents(cli.input[0]);
-            return fs.readFileAsync(cli.input[0], 'utf8');
+            result.infile = cli.input[0];
+            return fs.readFileAsync(result.infile, 'utf8');
         }
-        throw new Error('NO INPUT');
-    }),
-    // validate what we can before knowing if there's stdin input
-    Promise.resolve().then(function () {
-        var boolFlags = [
-            'h', 'help',
-            'v', 'version',
-            'i', 'inPlace'
-        ];
-        var stringFlags = [
-            'shiftwidth',
-            'attrExtraIndent'
-        ];
-        var onlySpaces = /^ *$/;
-        var onlyTabs = /^\t*$/;
-
-        var supportedFlags = Object.keys(cliAliases)
-            .map((key) => cliAliases[key]);
-
-        Object.keys(flags).forEach(function (flag) {
-            flag = cliAliases[flag] || flag;
-            // TODO decamelize the flag
-            var fullFlag = flag.length === 1 ?
-                '-' + flag :
-                '--' + flag;
-
-            assert(supportedFlags.indexOf(flag) !== -1,
-                    `Invalid flag "${fullFlag}". See: gsvg --help`);
-
-            if (boolFlags.indexOf(flag) === -1) {
-                assert(typeof flags[flag] !== 'boolean',
-                    `The flag "${fullFlag}" requires a parameter`);
-            } else {
-                assert(typeof flags[flag] === 'boolean',
-                    `Boolean flag "${fullFlag}" does not accept a parameter`);
-            }
-        });
-
-        assert(!flags.inPlace || files.length === 1,
-                '<infile> is required when using --in-place');
-
-        assert(cli.input.length <= 2,
-                'No more than 2 positional arguments are allowed');
-
-        // TODO abstract this repetitive mess
-        assert(flags.shiftwidth === undefined ||
-                typeof flags.shiftwidth === 'number' ||
-                typeof flags.shiftwidth === 'string',
-                '--shiftwidth must be an integer or a string');
-
-        assert(typeof flags.shiftwidth !== 'number' ||
-                flags.shiftwidth % 1 === 0,
-                '--shiftwidth <number> must be an integer');
-
-        assert(typeof flags.shiftwidth !== 'string' ||
-                onlySpaces.test(flags.shiftwidth) ||
-                onlyTabs.test(flags.shiftwidth),
-                '--shiftwidth <string> must be only spaces or "t"');
-
-        assert(flags.attrExtraIndent === undefined ||
-                typeof flags.attrExtraIndent === 'number' ||
-                typeof flags.attrExtraIndent === 'string',
-                '--attr-extra-indent must be an integer or a string');
-
-        assert(typeof flags.attrExtraIndent !== 'number' ||
-                flags.attrExtraIndent % 1 === 0,
-                '--attr-extra-indent <number> must be an integer');
-
-        assert(typeof flags.attrExtraIndent !== 'string' ||
-                onlySpaces.test(flags.attrExtraIndent) ||
-                onlyTabs.test(flags.attrExtraIndent),
-                '--attr-extra-indent <string> must be only spaces or "t"');
+    }).tap(function () {
+        // set up filenames
+        // it's OK if cli.input[x] is undefined, that's still falsy
+        if (result.stdin) {
+            result.outfile = cli.input[1];
+        } else {
+            result.infile = cli.input[0];
+            result.outfile = cli.input[1];
+        }
 
         // change 't' to '\t' for cli flags which set indent
-        stringFlags.forEach(function (flag) {
-            if (onlyTabs.test(flags[flag])) {
-                flags[flag] = flags[flag].replace(/t/g, '\t');
+        validationInfo.indentFlags.forEach(function (flag) {
+            if (cli.flags[flag] === 't') {
+                cli.flags[flag] = '\t';
             }
         });
-    })
-]).tap(function () {
-    // set up options
+    }).tap(function () {
+        // this will throw errors if any input is invalid
+        return validateArgs(cli, validationInfo, result);
+    }).then(function (input) {
+        // process the input
+        return gsvg(input, cli.flags);
+    }).then(function (output) {
+        // write to a file if the user asked for that
+        if (result.outfile) {
+            result.stdout = '';
+            // TODO prompt user first if file exists and !cli.flags.inPlace
+            return fs.writeFileAsync(result.outfile, output, 'utf8');
+        }
 
-    if (memo.stdin) {
-        assert(files.length < 2,
-                'Do not specify <infile> when piping to stdin');
+        return output;
+    }).catch(function (err) {
+        // catch errors and return error messages for humans
 
-        memo.outfile = files[1]; // it's OK if files[1] is undefined
-    } else {
-        memo.infile = files[0];
-        memo.outfile = files[1];
-    }
-}).spread(function (input) {
-    return gsvg(input, flags);
-}).then(function (output) {
-    if (memo.outfile) {
-        // TODO if file exists and !flags.inPlace, prompt user to confirm
-        return fs.writeFileAsync(memo.outfile, output, 'utf8');
-    }
+        result.exitCode = 1;
 
-    return process.stdout.write(output);
-}).catch(function (err) {
-    process.exitCode = 1;
-    if (err.name === 'AssertionError') {
-        return console.error(`  gsvg: ${err.message}`);
-    }
-    if (err.message === 'NO INPUT') {
-        return console.error(cli.help);
-    }
-    console.error(`name: ${err.name}`);
-    console.error(`code: ${err.code}`);
-    console.error(`syscall: ${err.syscall}`);
-    console.error(`path: ${err.path}`);
-    console.error(`  gsvg: ${err.message}`);
-// name: Error
-// code: ENOENT
-// syscall: open
-// path: D:\Harper\js\gsvg\a
-// ENOENT: no such file or directory, open 'D:\Harper\js\gsvg\a'
-});
+        if (err.message === 'NO INPUT') {
+            return cli.help;
+        }
+
+        if (err.name === 'Error') {
+            return `  GSVG: ${err.message}`;
+        }
+
+        console.error(`name: ${err.name}`);
+        console.error(`code: ${err.code}`);
+        console.error(`syscall: ${err.syscall}`);
+        console.error(`path: ${err.path}`);
+        console.error(`  GSVG: ${err.message}`);
+        // name: Error
+        // code: ENOENT
+        // syscall: open
+        // path: D:\Harper\js\gsvg\a
+        // ENOENT: no such file or directory, open 'D:\Harper\js\gsvg\a'
+    }).then(function (output) {
+        // collect and return all our data
+
+        if (result.exitCode >= 1) {
+            result.stdout = '';
+            result.stderr = output + '\n';
+        } else {
+            result.exitCode = 0;
+            result.stdout = output || '';
+            result.stderr = '';
+        }
+
+        // result: (object)
+        // - stdin (string || undefined)
+        // - stdout (string)
+        // - stderr (string)
+        // - exitCode (number)
+        // - infile (string || undefined)
+        // - outfile (string || undefined)
+        // - flags (object)
+        // - input (array) filenames which were sorted into infile and outfile
+        return result;
+    });
+};
+
+if (!isImportedModule) {
+    module.exports().then(function (result) {
+        process.stdout.write(result.stdout);
+        process.stderr.write(result.stderr);
+        process.exitCode = result.exitCode;
+    });
+}
