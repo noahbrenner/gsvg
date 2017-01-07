@@ -1,81 +1,104 @@
+// This module tests everything in the CLI that can be tested without spawning
+// new processes. The few that need a new process (mostly --help and --version)
+// are in cli-spawn.test.js
+
 'use strict';
 
 import test from 'ava';
 
-var gsvgSpawn = require('./_spawn-helper');
+var cli = require('../cli');
 
-// define macros
-var testIO = async function (t, cliArgs, opt) {
-    // extract from `opt` and set defaults
-    var {
-        stdin = '',
-        exitCode = 0,
-        stderrCompare = 'is', stderr = '',
-        stdoutCompare = 'is', stdout = ''
-    } = opt;
-
-    t.truthy(exitCode || stderr || stdout, 'Test Error: no input');
-
-    var stdio = await gsvgSpawn(stdin, cliArgs);
-
-    t.is(stdio.exitCode, exitCode);
-    t[stderrCompare](stdio.stderr, stderr);
-    t[stdoutCompare](stdio.stdout, stdout);
+var err = {
+    shiftwidth: '  GSVG: --shiftwidth must be an integer or a string\n',
+    shiftwidthStr: '  GSVG: --shiftwidth <string> must be only spaces or "t"\n'
 };
-
-var testShortFlag = function (t, cliArgs, opt) {
-    t.truthy(cliArgs.length);
-    t.regex(cliArgs[0], /^--[a-zA-Z]/);
-
-    var newCliArgs = cliArgs.slice(0);
-    var shortFlag = '-' + cliArgs[0][2];
-    newCliArgs[0] = shortFlag;
-
-    return testIO(t, newCliArgs, opt);
-};
-
-testShortFlag.title = providedTitle => `${providedTitle} - short flag`;
 
 // === TESTS === //
 
-// errors
-test('unmatched open tag', [testIO], [], {
-    stdin: '<g>',
-    exitCode: 1,
-    stderrCompare: 'regex',
-    stderr: /gsvg: Unclosed root tag/
+// non-error output is sent to stdout
+test('output goes to stdout', async t => {
+    var result = await cli([], '<svg />');
+    t.truthy(result.stdout);
+    t.is(result.stdout, '<svg />\n');
 });
 
-// output
-test('display help', [testIO, testShortFlag], ['--help'], {
-    stdoutCompare: 'regex',
-    stdout: /^\n {2}Git-Friendly SVG\n\n {2}Usage\n/
+// short flags are translated to their long counterparts
+test('-i means --in-place', async t => {
+    var result = await cli(['-i']);
+    t.true(result.flags.inPlace);
 });
 
-test('display help when no input received', testIO, [], {
-    exitCode: 1,
-    stderrCompare: 'regex',
-    stderr: /^\n {2}Git-Friendly SVG\n\n {2}Usage\n/
+test('-s means --shiftwidth', async t => {
+    var result = await cli(['-s']);
+    t.true(result.flags.shiftwidth);
 });
 
-test('display version', [testIO, testShortFlag], ['--version'], {
-    stdoutCompare: 'regex',
-    stdout: /^\d+\.\d+\.\d+\n$/
+test('-a means --attr-extra-indent', async t => {
+    var result = await cli(['-a']);
+    t.true(result.flags.attrExtraIndent);
 });
 
-test('false flag', [testIO, testShortFlag], ['--zomg-fake'], {
-    exitCode: 1,
-    stderrCompare: 'regex',
-    stderr: /gsvg: Invalid flag/
+// flags are parsed correctly
+test('--shiftwidth 0', async t => {
+    var result = await cli(['--shiftwidth', '0']);
+    t.is(result.flags.shiftwidth, 0);
 });
 
-test('shiftwidth', [testIO, testShortFlag], ['--shiftwidth', 1], {
-    stdin: '<g><g></g></g>',
-    exitCode: 0,
-    stdout: [
-        '<g>',
-        ' <g>',
-        ' </g>',
-        '</g>'
-    ].join('\n') + '\n'
+test('--shiftwidth 3', async t => {
+    var result = await cli(['--shiftwidth', '3']);
+    t.is(result.flags.shiftwidth, 3);
 });
+
+test('--shiftwidth <space>', async t => {
+    var result = await cli(['--shiftwidth', ' ']);
+    t.is(result.flags.shiftwidth, ' ');
+});
+
+test('--shiftwidth <empty string>', async t => {
+    var result = await cli(['--shiftwidth', '']);
+    t.is(result.flags.shiftwidth, '');
+});
+
+test('--shiftwidth t -> is translated to tab', async t => {
+    var result = await cli(['--shiftwidth', 't']);
+    t.is(result.flags.shiftwidth, '\t');
+});
+
+test('--shiftwidth tt -> gives an error', async t => {
+    var result = await cli(['--shiftwidth', 'tt']);
+    t.is(result.stderr, err.shiftwidthStr);
+    t.is(result.exitCode, 1);
+});
+
+test('--shiftwidth t<space> -> gives an error', async t => {
+    var result = await cli(['--shiftwidth', 't ']);
+    t.is(result.stderr, err.shiftwidthStr);
+    t.is(result.exitCode, 1);
+});
+
+test('--shiftwidth z -> gives an error', async t => {
+    var result = await cli(['--shiftwidth', 'z']);
+    t.is(result.stderr, err.shiftwidthStr);
+    t.is(result.exitCode, 1);
+});
+
+test('--shiftwidth (empty) -> gives an error', async t => {
+    var result = await cli(['--shiftwidth']);
+    t.is(result.stderr, err.shiftwidth);
+    t.is(result.exitCode, 1);
+});
+
+test('--shiftwidth 1.5 -> gives an error', async t => {
+    var result = await cli(['--shiftwidth', '1.5']);
+    t.is(result.stderr, err.shiftwidth);
+    t.is(result.exitCode, 1);
+});
+
+test.todo('fake flag');
+test.todo('short fake flag');
+
+// TODO tests that require tmp files:
+// * filenames are sorted correctly into infile and outfile
+// * same as above, taking stdin into account
+// * outfile is created correctly (and user is prompted if it already exists)
+// * --in-place works
