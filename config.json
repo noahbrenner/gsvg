@@ -1,4 +1,32 @@
 {
   "shiftwidth": 2,
-  "attrExtraIndent": 1
+  "attrExtraIndent": 1,
+  "inlineStartNodes": [
+    "cdata",
+    "textnode",
+    "br"
+  ],
+  "newlineEndNodes": [
+    "g",
+    "defs",
+    "svg"
+  ],
+  "simpleNodes": [
+    "xml",
+    "doctype",
+    "cdata",
+    "comment",
+    "closetag",
+    "textnode"
+  ],
+  "delimiters": {
+    "xml": ["<?xml ", "?>"],
+    "doctype": ["<!DOCTYPE", ">"],
+    "cdata": ["<![CDATA[", "]]>"],
+    "comment": ["<!--", "-->"],
+    "textnode": ["", ""],
+    "opentag": ["<", ">"],
+    "closetag": ["</", ">"],
+    "selfclosingtag": ["<", " />"]
+  }
 }
