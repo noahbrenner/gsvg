@@ -110,12 +110,13 @@ module.exports = function (cliArgs, testStdin) {
             testStdin :
             getStdin();
     }).then(function (stdin) {
-        // get input from stdin or input file
+        // get input from stdin if it's not empty
         if (stdin) {
             result.stdin = stdin;
             return stdin;
         }
 
+        // otherwise, read first named file if it exists
         if (cli.input[0]) {
             result.infile = cli.input[0];
             return fs.readFileAsync(result.infile, 'utf8');
@@ -140,7 +141,7 @@ module.exports = function (cliArgs, testStdin) {
         // throw an error if user input is invalid (handled in catch function)
         return validateArgs(cli, validationInfo, result, NO_INPUT);
     }).then(function (input) {
-        // process the input
+        // process the SVG input
         return gsvg(input, cli.flags);
     }).then(function (output) {
         // write to a file if the user asked for that
@@ -198,6 +199,7 @@ module.exports = function (cliArgs, testStdin) {
     });
 };
 
+// run the program and write to stdio if this file was called directly
 if (!isImportedModule) {
     module.exports().then(function (result) {
         process.stdout.write(result.stdout);
