@@ -7,6 +7,7 @@ var Promise = require('bluebird');
 var getStdin = require('get-stdin');
 var meow = require('meow');
 
+var config = require('./config');
 var validateArgs = require('./lib/validate-cli-args');
 var gsvg = require('./');
 
@@ -15,6 +16,10 @@ fs = Promise.promisifyAll(fs);
 
 // is this module imported or is it run as a CLI?
 var isImportedModule = require.main !== module;
+
+// make a token which validateArgs can return to represent "no input received"
+// this allows us to show help instead of err message for this special case
+var NO_INPUT = new Error('NO INPUT');
 
 // validateArgs uses this
 var validationInfo = {
@@ -81,26 +86,6 @@ Examples
     `
 };
 
-/* TODO check for these error codes in catch block of promise chain
-var getFileContents = function (filePath) {
-    filePath = path.normalize(filePath);
-
-    return fs.readFileAsync(filePath, 'utf8')
-        .catch(function (err) {
-            Object.keys(err).forEach((k) => console.log(`${k}: ${err[k]}`));
-            if (err.code === 'ENOENT') {
-                throw new Error('  File does not exist');
-            } else if (err.code === 'EISDIR') {
-                throw new Error('  Path is a directory, not a file');
-            } else if (err.code === 'EACCES') {
-                throw new Error('  Permission denied to access file');
-            } else if (err.code === 'EPERM') {
-                throw new Error('  Elevated permissions required to read file');
-            }
-        });
-};
-*/
-
 module.exports = function (cliArgs, testStdin) {
     // `cliArgs` and `testStdin` are optional and only used for tests
 
@@ -152,8 +137,8 @@ module.exports = function (cliArgs, testStdin) {
             }
         });
     }).tap(function () {
-        // this will throw errors if any input is invalid
-        return validateArgs(cli, validationInfo, result);
+        // throw an error if user input is invalid (handled in catch function)
+        return validateArgs(cli, validationInfo, result, NO_INPUT);
     }).then(function (input) {
         // process the input
         return gsvg(input, cli.flags);
@@ -169,26 +154,25 @@ module.exports = function (cliArgs, testStdin) {
     }).catch(function (err) {
         // catch errors and return error messages for humans
 
+        var errors = config.errors;
+        var errMsg = '  GSVG: ';
+
         result.exitCode = 1;
 
-        if (err.message === 'NO INPUT') {
-            return cli.help;
+        if (err === NO_INPUT) {
+            // show help if user provided no input
+            errMsg = cli.help;
+        } else if (errors[err.code]) {
+            // report file system errors
+            errMsg += `${errors[err.code]}: ${err.path || ''} (${err.code})`;
+        } else if (err.name === 'Error') {
+            // report errors thrown by validateArgs
+            errMsg += err.message;
+        } else {
+            throw err;
         }
 
-        if (err.name === 'Error') {
-            return `  GSVG: ${err.message}`;
-        }
-
-        console.error(`name: ${err.name}`);
-        console.error(`code: ${err.code}`);
-        console.error(`syscall: ${err.syscall}`);
-        console.error(`path: ${err.path}`);
-        console.error(`  GSVG: ${err.message}`);
-        // name: Error
-        // code: ENOENT
-        // syscall: open
-        // path: D:\Harper\js\gsvg\a
-        // ENOENT: no such file or directory, open 'D:\Harper\js\gsvg\a'
+        return errMsg;
     }).then(function (output) {
         // collect and return all our data
 

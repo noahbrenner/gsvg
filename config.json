@@ -28,5 +28,11 @@
     "opentag": ["<", ">"],
     "closetag": ["</", ">"],
     "selfclosingtag": ["<", " />"]
+  },
+  "errors": {
+    "EACCES": "Permission denied to access file",
+    "EISDIR": "Path is a directory, not a file",
+    "ENOENT": "File does not exist",
+    "EPERM": "Elevated permissions required to access file"
   }
 }
