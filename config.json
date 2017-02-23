@@ -29,6 +29,24 @@
     "closetag": ["</", ">"],
     "selfclosingtag": ["<", " />"]
   },
+  "validationInfo": {
+    "cliAliases": {
+      "h": "help",
+      "v": "version",
+      "i": "inPlace",
+      "s": "shiftwidth",
+      "a": "attrExtraIndent"
+    },
+    "boolFlags": [
+      "help",
+      "version",
+      "inPlace"
+    ],
+    "indentFlags": [
+      "shiftwidth",
+      "attrExtraIndent"
+    ]
+  },
   "errors": {
     "EACCES": "Permission denied to access file",
     "EISDIR": "Path is a directory, not a file",

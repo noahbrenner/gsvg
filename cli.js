@@ -21,29 +21,9 @@ var isImportedModule = require.main !== module;
 // this allows us to show help instead of err message for this special case
 var NO_INPUT = new Error('NO INPUT');
 
-// validateArgs uses this
-var validationInfo = {
-    cliAliases: {
-        // meow will decamelize any camelCase options
-        h: 'help',
-        v: 'version',
-        i: 'inPlace',
-        s: 'shiftwidth',
-        a: 'attrExtraIndent'
-    },
-    boolFlags: [
-        'help',
-        'version',
-        'inPlace'
-    ],
-    indentFlags: [
-        'shiftwidth',
-        'attrExtraIndent'
-    ]
-};
-
 var minimistOptions = {
-    alias: validationInfo.cliAliases
+    // long CLI flags are camelCased, but meow will --de-camelize them
+    alias: config.validationInfo.cliAliases
 };
 
 var meowOptionsTemplate = {
@@ -132,14 +112,14 @@ module.exports = function (cliArgs, testStdin) {
         }
 
         // change 't' to '\t' for cli flags which set indent
-        validationInfo.indentFlags.forEach(function (flag) {
+        config.validationInfo.indentFlags.forEach(function (flag) {
             if (cli.flags[flag] === 't') {
                 cli.flags[flag] = '\t';
             }
         });
     }).tap(function () {
         // throw an error if user input is invalid (handled in catch function)
-        return validateArgs(cli, validationInfo, result, NO_INPUT);
+        return validateArgs(cli, config.validationInfo, result, NO_INPUT);
     }).then(function (input) {
         // process the SVG input
         return gsvg(input, cli.flags);
