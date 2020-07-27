@@ -11,9 +11,19 @@ var getLines = function (xmlString, opt) {
     });
 };
 
+String.prototype.isBlank = function () {
+    return ! /\S/.test(this);
+};
+
+var removeBlankStrings = function (arr) {
+    return arr.filter(function (el) {
+        return ! el.isBlank();
+    });
+};
+
 module.exports = function (xmlString, opt) {
     return getLines(xmlString, opt).then(function (lines) {
-        return lines.join('\n') + '\n';
+        return removeBlankStrings(lines).join('\n') + '\n';
     });
 };
 
